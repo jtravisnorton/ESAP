@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<!--[if IE]> <html class="ie"> <![endif]-->
+<!--[if !(IE)]><!--> <html class=""> <!--<![endif]-->
+<head>
+    <title>The Point: New York State Syringe Access, Medical Waste Dropbox, and Drug Dropbox Locations</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable = no">
+    <link rel="stylesheet" type="text/css" href="static/css/main.css">
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+    <script src="static/js/esri-leaflet.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="static/css/L.Control.Sidebar_mobile.css">
+    <!-- <link rel="stylesheet" type="text/css" media="screen and (min-device-width: 800px)" href="static/css/L.Control.Sidebar.css"> -->
+    <script src="static/js/L.Control.Sidebar.js"></script>
+
+    <script src="static/js/leaflet-geoip.js"></script>
+
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.1/js/bootstrap.min.js"></script>
+    <link href="static/css/font-awesome.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="static/css/leaflet.awesome-markers.css">
+    <script src="static/js/leaflet.awesome-markers.js"></script>
+    <script src="static/js/Leaflet.MakiMarkers.js"></script>
+
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js"></script>
+    <style>
+    html, body {
+        height: 100vh;
+    }
+
+    #main-content{
+        height: 100vh;
+    }
+
+    #map-canvas {
+        height: 100%;
+    }
+    .navbar-container{
+        background-color: rgb(66, 139, 202);
+        border-radius: 0;
+        border: none;
+    }
+
+    .patient-alert{
+        position: fixed;
+        right: 1em;
+        margin-top: 4em;
+        z-index: 100000;
+    }
+
+    .map-control{
+        padding: 1em;
+        border-radius: 3px;
+        border-color: rgba(255, 255, 255, 0.75);
+        background-color:white;
+        border-width: 5px;
+        -webkit-box-shadow: 0px 0px 5px 2px rgba(50, 50, 50, 0.75);
+        -moz-box-shadow: 0px 0px 5px 2px rgba(50, 50, 50, 0.75);
+        box-shadow: 0px 0px 5px 2px rgba(50, 50, 50, 0.75);
+        mid-width: 300px;
+    }
+    @media (min-device-width: 800px){
+        .navbar{
+            display: none;
+        }
+    }
+    @media (max-device-width: 800px){
+        #main-content {
+            height: calc(100% - 50px);
+            height: -webkit-calc(100% - 50px);
+            height: -moz-calc(100% - 50px);
+            height: 90%;
+        }
+        #sidepanel{
+            display: none;
+        }
+    }
+    .input-hidden{
+      display: none;
+    }
+    .search-control{
+      border-radius: 4px;
+      box-shadow: rgba(0, 0, 0, 0.65098) 0px 1px 5px 0px;
+    }
+    .list-group-item:hover{
+      background: lightgrey;
+    }
+    .list-group-item.selected{
+      background-color: #428BCA;
+      color: white;
+    }
+    .address-list-group{
+      max-width: 234px;
+    }
+    </style>
+</head>
+
+<body>
+    <div class="modal fade" id="introModal" tabindex="-1" role="dialog" aria-labelledby="myModal" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Welcome to <em>The Point</em></h3>
+            </div>
+            <div class="modal-body">
+                <p>This is a portal to find locations near you to obtain hypodermic needles and syringes without a prescription. It also provides locations where syringes and drugs can be disposed in secure and anonymous dropboxes (kiosks). Note: The locations identified here are updated periodically and may contain inaccuracies. If you have questions about the locations, contact them using the phone numbers provided.</p>
+                <p>These needle/syringe disposal kiosks are alternatives to the hospitals and nursing homes, which are mandated to accept home-generated sharps as a free community service through their sharps collection programs. Visit the <a href="http://www.health.ny.gov/diseases/aids/consumers/prevention/needles_syringes/sharps/index.htm" target="_blank">NYS Safe Sharps Collection Program</a> site for more information.</p>
+                <p>Co-located  drug and syringe drop off sites are currently available in Erie and Suffolk Counties only. A list of upcoming household drug collection  activities in your region can be found on the NYS  Department of Environmental Conservation. Please visit <a href="http://www.dec.ny.gov/chemical/63826.html" target="_blank">the Household Drug Collection Schedule online</a>.</p>
+            </div>
+            <div class="modal-footer">
+                <p class="pull-left"><small>This site works best on Chrome, Safari, Firefox, and Internet Explorer 9 or higher.</small></p>
+                <button type="button" id="continue-button" class="btn" data-toggle="modal" data-target="#locationModal">Continue</button>
+            </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="locationModal" tabindex="-1" role="dialog" aria-labelledby="myModal" aria-hidden="true">
+      <div class="modal-dialog ">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>What kind of location do you want to find?</h3><small>(Check all that apply)</small>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <label class="checkbox">
+                        <input class="location-type-picker" type="checkbox" id="needle_access" value="needle-access">
+                        Syringe access
+                    </label>
+                    <label class="checkbox">
+                        <input class="location-type-picker" type="checkbox" id="needle_drop" value="needle-dropoff">
+                        Syringe/Sharps dropoff
+                    </label>
+                    <label class="checkbox">
+                        <input class="location-type-picker" type="checkbox" id="drug_drop" value="drug-dropoff">
+                        Co-located drug and syringe dropoff (Erie & Suffolk Counties only)
+                    </label>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="continue-to-site">Continue to site</button>
+            </div>
+        </div>
+      </div>
+    </div>
+    <nav class="navbar" role="navigation" style="margin-bottom: 0; border: none;">
+      <div class="container-fluid navbar-container col-md-5 col-sm-12">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#" style="color:white;">The Point</a>
+        </div>
+        <div class="collapse navbar-collapse"></div>
+      </div><!-- /.container-fluid -->
+    </nav>
+    <div class="container-fluid" id="main-content">
+        <div class="row" style="height: 100%; max-height: 100%; position: relative;">
+            <div class="col-md-5 col-sm-0" style="height: 100%; max-height: 100%;" id="sidepanel">
+                <div class="row bg-primary" style="max-height: 20%">
+                    <div style="margin-left: 1em;">
+                        <img src="static/images/thepoint_logo_sm.png" style="display: block; margin-left: auto; margin-right: auto;">
+                    </div>
+                </div>
+
+                <div class="row" style="max-height: 100%; overflow: auto; margin: 1em;">
+                  <div class="panel-group" id="accordion" role="tablist" aria-multiselectable="true">
+                    <div class="panel panel-default">
+                      <div class="panel-heading" role="tab" id="headingOne">
+                        <h4 class="panel-title">
+                          <a role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                            <span id="point_table_title">No locations in current view</span>
+                          </a>
+                        </h4>
+                      </div>
+                      <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">
+                        <div class="panel-body">
+                          <div class="sidebar-pane" id="table_big" style="position: relative; max-height: 65vh; overflow: scroll">
+                                <table id="point_table" class="table table-hover">
+                                    <tbody></tbody>
+                                </table>
+                                Enter your address or pan to a new location
+
+                          </div>                        </div>
+                      </div>
+                    </div>
+                    <div class="panel panel-default">
+                      <div class="panel-heading" role="tab" id="headingTwo">
+                        <h4 class="panel-title">
+                          <a class="collapsed" role="button" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                            More information
+                          </a>
+                        </h4>
+                      </div>
+                      <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">
+                        <div class="panel-body" id="more_info_big">
+                          <h4>
+                            <a href="https://www.health.ny.gov/diseases/aids/consumers/prevention/needles_syringes/esap/overview.htm" target="_blank"><img src="static/images/esap_logo.png" class="center-block" height="80px"></a><br>
+                            <em>For more information, visit the <a href="https://www.health.ny.gov/diseases/aids/consumers/prevention/needles_syringes/esap/overview.htm">New York State Expanded Syringe Access Program</a> online.</em>
+                          </h4>
+                          <p><a href="https://www.health.ny.gov/diseases/aids/consumers/prevention/needles_syringes/docs/sep_hours_sites.pdf" target="_blank">NYS-Authorized Syringe Exchange Programs</p>
+                          <p><a href="http://www.dec.ny.gov/chemical/63826.html" target="_blank">Household Drug Collection Schedule</a></p>
+                          <p><a href="http://www.health.ny.gov/publications/0230.pdf" target="_blank">New York State's 911 Good Samaritan Law </a> protects persons seeking assistance in good faith as well as persons who have overdosed from drug-related criminal charges.</p>
+                          <div class="well well-sm"><em>Brought to you by the <strong><a href="http://ichp.buffalostate.edu/" target="_blank">Institute for Community Health Promotion at SUNY Buffalo State</a></strong> in collaboration with the <strong><a href="http://www2.erie.gov/health/" target="_blank">Erie County Department of Health</a></strong></em></div>                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+            </div>
+            <div class="col-md-7 col-sm-12" style="padding: 0; height: 100%;">
+                <div id="sidebar" class="sidebar collapsed">
+                <ul class="sidebar-tabs" role="tablist">
+                    <li><a href="#more-info" role="tab" title="More information"><i class="fa fa-info-circle"></i></a></li>
+                    <li><a href="#table" role="tab" title="Show location table"><i class="fa fa-table"></i></a></li>
+                    <li id="toggle-sidebar" class="sidebar-close pull-right" style="cursor: pointer;"><a title="Close"><strong>&#10006</strong></a></li>
+                </ul>
+                <div class="sidebar-content active" >
+                    <div class="sidebar-pane" id="table">
+                    </div>
+                    <div class="sidebar-pane" id="more-info">
+                    </div>
+                    <div class="sidebar-pane" id="popup-alternate">
+
+                    </div>
+                </div>
+            </div>
+                <div id="map-canvas" class="sidebar-map">
+                </div>
+            </div>
+        </div>
+    </div>
+<script type="text/javascript">
+    function initialize() {
+      var map, point_table, sidebar;
+      var tooltip_shown = false;
+      var getPoints_called = false;
+      var points = L.layerGroup();
+      var point_map = [];
+      var zoom_points = 12;
+      var zoom_max = 14;
+      var init_bounds = L.latLngBounds(
+      L.latLng(40.59875083395948, -79.23850049516057),
+      L.latLng(44.75896447862758, -73.27685372593069)),
+      address_string = "",
+      screen_width = (window.innerWidth > 0) ? window.innerWidth : screen.width,
+      proxy = "http://nydropboxes.org/PHP/proxy.php?",
+      ua = window.navigator.userAgent,
+      featureLayerURL = "http://geographyplanning.buffalostate.edu/arcgis/rest/services/chsr/esap_dropoff_locations/MapServer/0",
+
+      fields = [
+        {
+          field: 'name',
+          alias: 'Name',
+          getHtml: function(props){
+            var text = props[this.field]?'<strong><a id="'+props.OBJECTID+'" class="location-link" style="cursor:pointer;">'+props[this.field]+'</a></strong>':undefined;
+            return text
+          }
+        },
+        {
+          field: ['needle_access', 'needle_drop', 'drug_drop'],
+          alias: ['Syringe Access', 'Syringe Dropoff', 'Drug Dropoff'],
+          getHtml: function(props){
+            var text = [];
+            for (i = 0; i < this.field.length; i++){
+                props[this.field[i]] && props[this.field[i]]==1?text.push(this.alias[i]):undefined;
+            }
+            if (text.length > 0) return '<button type="button" class="btn btn-success btn-xs">' + text.join('</button> <button type="button" class="btn btn-success btn-xs">') + '</button>';
+          }
+        },
+        {
+          field: 'address',
+          alias: 'Address',
+          getHtml: function(props){
+            var text = props[this.field]?props[this.field]:undefined;
+            return text
+          }
+        },
+        {
+          field: 'city',
+          alias: 'City',
+          getHtml: function(props){
+            var text = props[this.field]?props[this.field] + ', NY':undefined;
+            return text
+          }
+        },
+        {
+          field: 'phone',
+          alias: 'Phone',
+          getHtml: function(props){
+            var text = props[this.field]?props[this.field]:undefined;
+            return text
+          }
+        },
+        {
+          field: 'site_type',
+          alias: 'Location',
+          getHtml: function(props){
+            var text = props[this.field]?this.alias + ': ' + props[this.field]:undefined;
+            return text
+          }
+        },
+        {
+          field: 'hours',
+          alias: 'Hours',
+          getHtml: function(props){
+            var text = props[this.field] && props[this.field].length > 2?'<strong>' + this.alias + ':</strong> ' + props[this.field]:undefined;
+            return text
+          }
+        },
+        {
+          field: 'dropoff_loc',
+          alias: 'Dropoff location',
+          getHtml: function(props){
+            var text = props[this.field]?'<strong>' + this.alias + ':</strong> ' + props[this.field]:undefined;
+            return text
+          }
+        }
+      ],
+
+      icons = {
+        needle_access: L.MakiMarkers.icon({icon: "circle", color: "#428bca", size: "l"}),
+        needle_drop: L.MakiMarkers.icon({icon: "circle", color: "#5cb85c", size: "l"}),
+        drug_drop: L.MakiMarkers.icon({icon: "circle", color: "#f0ad4e", size: "l"}),
+      },
+
+      alert_control = L.control({position: 'topright'});
+      alert_control.onAdd = function(){
+        var $nopoints_alert_div = $('<div>');
+        var $zoom_alert_div = $('<div>');
+        var $div = $('<div>');
+        // $div.css("width","300px")
+
+        $nopoints_alert_div.html('<div class="alert alert-danger" id="no-points-warning" role="alert"><strong>Warning:</strong> No locaitons in view. Try a different location.</div>')
+        $zoom_alert_div.html('<div class="alert alert-info" id="zoom-warning" role="alert"><strong>Warning: </strong>Zoom in to reload points</div>');
+
+        $div.append($nopoints_alert_div);
+        $div.append($zoom_alert_div);
+        var stop = L.DomEvent.stopPropagation;
+        L.DomEvent
+            .on($div[0], 'click', stop)
+            .on($div[0], 'mousedown', stop)
+            .on($div[0], 'touchstart', stop)
+            .on($div[0], 'dblclick', stop)
+            .on($div[0], 'mousewheel', stop)
+            .on($div[0], 'MozMousePixelScroll', stop);
+        return $div[0];
+      }
+
+      var reload_points = L.control({position: 'topleft'});
+      reload_points.onAdd = function(){
+        var $div = $('<div class="leaflet-control-zoom leaflet-bar leaflet-control">');
+        $div.html('<div id="reload" class="disabled"><i class="fa fa-refresh fa-fw" id="refresh_icon" data-toggle="tooltip" data-placement="right" title="Search this area"></i></div>');
+        return $div[0];
+      }
+
+      //function for clearing, fetching, and rendering points from the ArcGIS server
+      function getPoints(){
+        map.removeLayer(points);
+        var layer = new L.esri.Layers.FeatureLayer(featureLayerURL,{useCors: false});
+
+        var bounds = map.getBounds();
+
+        var query = layer.query();
+        if (map.getBounds()) query.within(bounds);
+        query.where(getWhereLocationTypes());
+        $("#refresh_icon").addClass('fa-spinner fa-spin');
+        query.run(function(error, featureSet){
+          setTimeout(function(){$("#refresh_icon").removeClass('fa-spinner fa-spin');}, 2000);
+          if (error) {
+            $('#no-points-warning').fadeIn(250);
+            setTimeout(function(){$('#no-points-warning').fadeOut(250);}, 5000);
+            $('#point_table_title').text("No locations in current view");
+            $('#point_table > tbody').empty();
+            return error;
+          }
+          else {
+            getPoints_called = true;
+            if(featureSet.features.length === 0) {
+              $('#no-points-warning').fadeIn(250);
+              setTimeout(function(){$('#no-points-warning').fadeOut(250);}, 5000);
+              $('#point_table_title').text("No locations in current view");
+              $('#point_table > tbody').empty();
+            }
+            else {
+              $('#no-points-warning').fadeOut(250);
+              $('#point_table_title').text("Locations in current view");
+              points = L.geoJson(featureSet, {
+                onEachFeature: function(feature, layer) {
+                  var latlng = L.latLng(feature.geometry.coordinates[1], feature.geometry.coordinates[0])
+                  var props = feature.properties
+                  point_map[props.OBJECTID] = {layer:layer, latLng: latlng};
+                  layer.bindPopup(renderLocationHTML(props));
+                  if(screen_width < 800){layer.on('popupopen', function(e){
+                                      map.closePopup(e.popup);
+                                      $('#popup-alternate').html(e.popup.getContent());
+                                      sidebar.open('popup-alternate')
+                                    });}
+                }
+              }).addTo(map);
+              var bounds = points.getBounds();
+              loadPointsToTable(featureSet.features);
+              return featureSet;
+            }
+          }
+        });
+      }
+
+      //loads points to table
+    function loadPointsToTable(features){
+      $('#point_table > tbody').empty();
+        features.forEach(function(f){
+          $('#point_table > tbody').append($('<tr class="location_row" id='+f.properties.OBJECTID+'>').html(renderLocationHTML(f.properties)));
+        });
+        $('.location_row').click(function(){
+                                  if (screen_width >= 800){
+                                    map.panTo(point_map[this.id].latLng);
+                                    point_map[this.id].layer.openPopup();
+                                  }
+                              });
+    }
+
+    //renders point popup box
+    function renderLocationHTML(props){
+        var prop_keys = Object.keys(props);
+        var p = point_map[props.OBJECTID].latLng;
+        var dir_url = "https://www.google.com/maps/dir/"+address_string+"/"+p.lat+","+p.lng
+        var html_strings = fields.map(function(f){
+          return f.getHtml(props);
+        }).filter(function(f){
+          return typeof(f) === 'string';
+        })
+        return '<address>' + html_strings.join('<br>') + '<br><a id="directions-link" href='+dir_url+' target="_blank" layer_id="'+props.OBJECTID+'">Directions</a></address>';
+    }
+
+    //checks which location types are currently selected, for use in getPoints()
+    function getWhereLocationTypes(){
+      var query_elements = []
+      $(".location-type-picker").each(function(){
+          this.checked?query_elements.push(this.id + " = '1'"):null;
+      });
+      return query_elements.length > 0?query_elements.join(' or '):"";
+    }
+
+    //remainder: adds map and control elements, event handlers, and sets map initial state
+    map = L.map('map-canvas');
+    var Acetate_all = L.tileLayer('http://a{s}.acetate.geoiq.com/tiles/acetate-hillshading/{z}/{x}/{y}.png', {
+                  attribution: '&copy;2012 Esri & Stamen, Data from OSM and Natural Earth',
+                  subdomains: '0123',
+                  minZoom: 2,
+                  maxZoom: 18
+              }).addTo(map);
+
+    map.fitBounds(init_bounds);
+    map.on('zoomend', zoomEvent);
+    map.on('dragend', dragEvent);
+    map.on('layeradd', function(e){
+      //empty
+    });
+    map.on('layerremove', function(e){
+      //empty
+    });
+
+    //initialize map view with client IP address
+    map.setZoom(zoom_points);
+    // var client_ip_pos = L.GeoIP.getPosition();
+    // if(client_ip_pos.lat != 0 && init_bounds.contains(client_ip_pos)) {
+    //   map.setView(client_ip_pos, zoom_points);
+    //   }
+    // else {
+    //   map.setZoom(zoom_points);
+    // }
+
+    //begin geocoding, search control
+    var geocoder_responses;
+    var address_marker = L.circleMarker(L.latLng(0,0),{
+            color: 'white',
+            weight: 5,
+            fillColor: '#18BA5B',
+            opacity: 1,
+            fillOpacity: 1,
+          });
+
+    map.addLayer(address_marker);
+
+    function googleGeocode(address_text, callResponse){
+      document.querySelector('#search-button').class = "fa fa-spinner fa-pulse"
+      var geocoder = new google.maps.Geocoder();
+      geocoder.geocode({
+        address: address_text,
+        componentRestrictions: {administrativeArea: 'NY',country:'US'},
+        location: {lat: map.getCenter().lat, lng: map.getCenter().lng}
+      }, callResponse);
+    }
+
+    function addAddressToMap(address_obj){
+      function _addressToMap(a){
+        var add = a.geometry.location;
+        address_marker.setLatLng(L.latLng(add.lat(), add.lng()));
+        map.setView(address_marker.getLatLng(), zoom_max);
+
+        address_latlng = address_marker.getLatLng()
+        address_string = encodeURIComponent(a.formatted_address);
+        getPoints();
+        $('.list-group-item').remove();
+        document.querySelector('#search-form').value = a.formatted_address;
+      }
+      $('.list-group-item').remove();
+      if(!address_obj){
+        _addressToMap(geocoder_responses[0]);
+      }
+      else{
+        _addressToMap(address_obj);
+      }
+    }
+
+    function addressTipList(resp){
+      if (!resp){
+        window.setTimeout(googleGeocode(document.querySelector('#search-form').value,this), 3000);
+      }
+      else {
+        document.querySelector('#search-button').class = "fa fa-search"
+        //clear old tip list
+        $('.list-group-item').remove();
+        //sort responses by distance to map center
+        resp.sort(function(a,b) {
+          var a_latlng = L.latLng(a.geometry.location.lat(), a.geometry.location.lng());
+          var b_latlng = L.latLng(b.geometry.location.lat(), b.geometry.location.lng());
+          var a_dist = a_latlng.distanceTo(map.getCenter());
+          var b_dist = b_latlng.distanceTo(map.getCenter());
+          if (a_dist > b_dist) {
+            return 1;
+          }
+          if (a_dist < b_dist) {
+            return -1;
+          }
+          // a must be equal to b
+          return 0;
+        });
+        var j = 0;
+        resp.slice(0,5).forEach(function(r){
+          var option = L.DomUtil.create('li', 'list-group-item');
+          option.setAttribute('role', 'option')
+          option.setAttribute('aria-selected', 'true')
+          option.id = 'tip-' + j
+          option.innerHTML = r.formatted_address.split(',').slice(0, this.length-1).join(',');
+          document.querySelector('.address-list-group').appendChild(option);
+          j += 1;
+        });
+        geocoder_responses = resp;
+
+        $("[id^=tip-]").css('cursor','pointer');
+        $("[id^=tip-]").click(function(e){
+          e.stopPropagation();
+          var id = parseInt($(e.target).attr('id').split('-')[1]);
+          addAddressToMap(geocoder_responses[id]);
+          document.activeElement.blur();
+        });
+      }
+    }
+
+    var search_control = L.control({position: 'topright'});
+    search_control.onAdd = function(){
+      var container = L.DomUtil.create('div', '');
+      var form = L.DomUtil.create('form', 'address-search-form', container);
+      var form_ul = L.DomUtil.create('ul', 'list-group address-list-group', form);
+      form_ul.style.listStyle = 'none';
+      form_ul.addEventListener('click', function(e){document.querySelector('#search-form').focus();})
+
+      var input_li = L.DomUtil.create('li', '', form_ul)
+      var input_div = L.DomUtil.create('div', 'input-group', input_li);
+      var form_input = L.DomUtil.create('input', 'form-control', input_div);
+      form_input.id = 'search-form'
+      input_div.innerHTML += '<span class="input-group-addon" style="width: 20px"><a><i class="fa fa-search" id="search-button"></i></a></span>'
+
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        if(!$('.list-group-item.selected').length){
+          addAddressToMap();
+        }
+        else{
+          addAddressToMap(geocoder_responses[parseInt($('.list-group-item.selected').attr('id').split('-')[1])]);
+        }
+      });
+      container.addEventListener('mouseover', function(){map.dragging.disable();map.doubleClickZoom.disable();});
+      container.addEventListener('mouseout', function(){map.dragging.enable();map.doubleClickZoom.enable();});
+
+      return container;
+    }
+
+    map.addControl(search_control);
+    $('#search-form').keydown(function(e){
+      if(e.which === 40){
+        if (!$('.list-group-item.selected').length){
+          $('#tip-0').addClass('selected');
+        }
+        else {
+          var next = parseInt($('.list-group-item.selected').attr('id').split('-')[1]) + 1
+          next = '#tip-' + next;
+          $('.list-group-item.selected').removeClass('selected');
+          document.querySelector(next).className += ' selected';
+        }
+      }
+      else if (e.which === 38){
+        if (!$('.list-group-item.selected').length){
+          geocoder_responses.length < 5?$('#tip-'+(geocoder_responses.length-1)).addClass('selected'):$('#tip-4').addClass('selected');
+        }
+        else {
+          var next = parseInt($('.list-group-item.selected').attr('id').split('-')[1]) - 1
+          next = '#tip-' + next;
+          $('.list-group-item.selected').removeClass('selected');
+          document.querySelector(next).className += ' selected';
+        }
+      }
+    });
+    $('#search-form').keyup(function(e) {
+      if (e.which >= 48 && e.which <= 90){
+        e.preventDefault();
+        googleGeocode(e.target.value, addressTipList);
+      }
+    });
+    //end search control, geocoding
+
+    //add additional controls
+    sidebar = L.control.sidebar('sidebar',{position: 'right'}).addTo(map);
+    $('#toggle-sidebar').hide();
+    $('#toggle-sidebar').click(function(){sidebar.close()});
+    sidebar.on('opening', function(){$('#toggle-sidebar').show();})
+    sidebar.on('closing', function(){$('#toggle-sidebar').hide();})
+
+    var choose_different_points = L.control({position: 'bottomright'});
+    choose_different_points.onAdd = function(){
+      var $div = $('<div class="leaflet-control-zoom leaflet-bar leaflet-control">');
+      $div.html('<button type="button" class="btn btn-success" data-toggle="modal" data-target="#locationModal">Choose a different type of location</button>');
+      return $div[0];
+    }
+    map.addControl(choose_different_points);
+    map.addControl(alert_control);
+    map.addControl(reload_points);
+
+    function zoomEvent(e){
+      if (map.getZoom() >= zoom_points){
+        $('#zoom-warning').fadeOut(250);
+        //if(zoom_alert_added){$zoom_alert.remove(); zoom_alert_added=false;}
+        $('#reload').removeClass('disabled');
+      }
+      else{
+        if (!$('#reload').hasClass('disabled')) $('#reload').addClass('disabled');
+        $('#refresh_icon').tooltip('hide');
+        tooltip_shown = false;
+        $('#zoom-warning').fadeIn(250);
+      }
+    }
+    function dragEvent(e){
+      if (map.getZoom() >= zoom_points){
+          if (!tooltip_shown){
+            $('#refresh_icon').tooltip('show');
+            tooltip_shown = true;
+          }
+          if ($('#reload').hasClass('disabled')) $('#reload').removeClass('disabled');
+      }
+    }
+
+    //event listeners to reload points
+    $('#reload').click(function(){
+      if (!$(this).hasClass('disabled')){
+        $('#refresh_icon').tooltip('hide');
+        tooltip_shown = false;
+        getPoints();
+      }
+    });
+
+    $('#no-points-warning').hide();
+    $('#zoom-warning').hide();
+
+    $('#refresh_icon').tooltip({
+      trigger: 'manual'
+    });
+
+    var search_control = $('.geocoder-control.leaflet-control');
+    search_control.addClass('input-group input-group-lg');
+    $('.geocoder-control-suggestions').css('z-index','100000');
+
+    $('.geocoder-control-input.leaflet-bar').attr('placeholder', 'Enter your city, zip code, or address');
+
+    $('#introModal').modal({backdrop:'static'});
+    $('#locationModal').modal({backdrop:'static', show:false});
+    $('#continue-button').click(function(){$('#introModal').modal('hide');});
+    $('#continue-to-site').click(function(){
+      $('#locationModal').modal('hide');
+      getPoints();
+      });
+
+    if(screen_width < 800){
+      $('#table').html($('#table_big').html());
+      $('#table_big').empty();
+      $('#more-info').html($('#more_info_big').html());
+      $('#more_info_big').empty();
+    }
+  }
+  $(initialize);
+</script>
+</body>
+<!--BEGIN QUALTRICS POPUP-->
+<script type="text/javascript">
+var q_viewrate=100;
+if (Math.random() < q_viewrate / 100){var q_popup_f = function(){var q_script = document.createElement("script");var q_popup_g = function(){new QualtricsEmbeddedPopup({
+	id: "SV_3as97FPgA5sWrHL",
+	imagePath: "https://qdistribution.qualtrics.com/WRQualtricsShared/Graphics/",
+	surveyBase: "https://buffalostate.co1.qualtrics.com/WRQualtricsSurveyEngine/",
+	delay:15000,
+	preventDisplay:0,
+	animate:true,
+	width:400,
+	height:300,
+	surveyPopupWidth:900,
+	surveyPopupHeight:600,
+	startPos:"ML",
+	popupText:"Please take a moment to participate in a survey.",
+	linkText:"Click Here"
+});};q_script.onreadystatechange= function () {if (this.readyState == "loaded") q_popup_g();};q_script.onload= q_popup_g;q_script.src="https://qdistribution.qualtrics.com/WRQualtricsShared/JavaScript/Distribution/popup.js";document.getElementsByTagName("head")[0].appendChild(q_script);};if (window.addEventListener){window.addEventListener("load",q_popup_f,false);}else if (window.attachEvent){r=window.attachEvent("onload",q_popup_f);}else {};};
+</script>
+<noscript><a target="_blank" href="https://buffalostate.co1.qualtrics.com/WRQualtricsSurveyEngine/?SID=SV_3as97FPgA5sWrHL">Click Here</a><br/></noscript>
+<!--END QUALTRICS POPUP-->
+</html>
